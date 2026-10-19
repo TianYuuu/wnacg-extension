@@ -63,26 +63,7 @@ PY
 )"
 cp "$BEST" "$ROOT/icon/eu.kanade.tachiyomi.extension.zh.wnacg.png"
 
-python3 - "$ROOT" "$PKG" <<'PY'
-import json, sys, os
-root, name = sys.argv[1], sys.argv[2]
-meta = json.load(open(os.path.join(root, "src-info.json")))
-entry = {
-    "name": meta["name"],
-    "pkg": meta["packageName"],
-    "apk": name + ".apk",
-    "lang": "zh",
-    "code": meta["versionCode"],
-    "version": meta["versionName"],
-    "nsfw": 1 if meta["contentWarning"] >= 3 else 0,
-    "sources": [
-        {"id": s["id"], "lang": s["lang"], "name": s["name"], "baseUrl": s["baseUrl"]}
-        for s in meta["sources"]
-    ],
-}
-json.dump([entry], open(os.path.join(root, "index.min.json"), "w"), ensure_ascii=False, indent=2)
-print("==> index.min.json 已更新：", entry["version"], entry["code"])
-PY
+python3 "$ROOT/build/make_index.py" "$ROOT" "$PKG.apk"
 
 echo "完成。提交 repo 分支："
 echo "  git add -A && git commit -m 'update apk' && git push origin repo"
