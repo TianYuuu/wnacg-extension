@@ -40,7 +40,7 @@ https://cdn.jsdelivr.net/gh/TianYuuu/wnacg-extension@repo/index.pb     ← GitHu
 | 搜索内筛分类 / 多标签 | 一次请求带上 `cate=` 与 `tag=a,b`（AND），不必「先搜再筛」 |
 | 去掉了「跟随默认」中间态 | 榜单下拉永远是一个具体周期，显示什么就是什么 |
 | 修掉小毛病 | 分类表补上「韩漫-合集」、去掉重复的「杂志&短篇-汉语」 |
-| 关闭 R8 混淆 + lambda 编译为类 | 否则 Tachimanga（iOS）会两次 `VerifyError: JVMVRFY021`；代价是 APK 从 68KB 变 192KB |
+| 关闭 R8 混淆 + lambda 编译为类 + minSdk 21 | 三者都是为 Tachimanga（iOS）的字节码校验器准备：否则会 `VerifyError: JVMVRFY021`；代价是 APK 从 68KB 变 194KB |
 
 功能细节见 [`patch/改造说明.md`](patch/改造说明.md)。
 
@@ -124,7 +124,7 @@ KEY_STORE_PASSWORD=*** KEY_PASSWORD=*** \
 
 发版流程：
 
-1. 改 `build.gradle.kts` 里的 `versionCode`（WNACG 当前 102；CopyManga 当前 109）；
+1. 改 `build.gradle.kts` 里的 `versionCode`（WNACG 当前 103；CopyManga 当前 110）；
 2. 在上游工作区改完代码后 `git diff > patch/xxx.diff`；
 3. 跑 `build.sh`，提交并推 `repo` 分支。
 
@@ -142,8 +142,8 @@ repo 分支（客户端读取的）
   index.min.json                                     旧格式索引
   index.pb                                           protobuf 索引（Tachimanga / 新版 Mihon）
   repo.json                                          仓库元信息 + 签名指纹
-  apk/tachiyomi-zh.wnacg-v1.6.102.apk
-  apk/tachiyomi-zh.copymanga-v1.6.109.apk
+  apk/tachiyomi-zh.wnacg-v1.6.103.apk
+  apk/tachiyomi-zh.copymanga-v1.6.110.apk
   icon/eu.kanade.tachiyomi.extension.zh.wnacg.png
   icon/eu.kanade.tachiyomi.extension.zh.copymanga.png
 ```
@@ -160,3 +160,31 @@ index 的目录约定（Mihon 的解析方式）：
   （**整个仓库的所有扩展必须用同一把 key**，否则客户端会以签名不一致拒绝安装）。
 - **签名密钥不进仓库**。`signingkey.jks` 自己离线保管；换 key 只能卸载重装。
 - 上游改动导致补丁失效时，用 `git apply --3way` 或手动合并。
+
+---
+
+## 关于 Tachimanga（iOS）
+
+Tachimanga 不是 Android 应用，它用自己的 JVM 跑扩展的 dex，因此对字节码形态比 Mihon/Komikku 挑剔得多。
+按 [官方扩展指南](https://tachimanga.app/help/guides/extensions_guide.html) 和社区的实践，已经做了三件事：
+
+| 改动 | 原因 |
+| --- | --- |
+| 关闭 R8（`isMinifyEnabled = false`） | 混淆后的单字母类 + 激进优化会被它的校验器拒绝（`class=k`） |
+| lambda 编译为类（`-Xlambdas=class`） | 否则 D8 脱糖留下 `xxx$lambda$N`，同样报 `VerifyError` |
+| **minSdk 降到 21** | minSdk ≥ 26 时 D8 不做完整脱糖（默认方法、部分 Java 8 构造保持原样），它的运行时校验不过 |
+
+仓库地址请用 **`index.min.json`** 结尾的那条（Tachimanga 的文档只保证这个格式；`index.pb` 在部分版本上不认）：
+
+```
+https://raw.githubusercontent.com/TianYuuu/wnacg-extension/repo/index.min.json
+```
+
+若要更换/重装扩展：先在 Tachimanga 里卸载同名扩展，再装本仓库版本；装好后如果出现「未信任 / Trust」提示，
+点一下确认——自建仓库的签名不在它的白名单里，这是正常流程。
+
+> 仍未解决的部分：这套扩展是用 lib 1.6（suspend API）编译的。Tachimanga 的实现更接近老版
+> Tachiyomi 的 1.4 API，若遇到「源能装但打开是空」这类症状，就需要把源码移植回 1.4 的
+> Request/Parse 同步接口重新编译（社区里 `xixiwan/mihon-ehentai-extension` 就是这么做的）。
+> 这一步工作量较大，且会丢掉 `fetchFilterData`（动态题材列表）和 `getMangaByUrl`（深链），
+> 需要时再做。

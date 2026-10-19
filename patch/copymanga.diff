@@ -17,8 +17,20 @@ index 924c28c..1b62023 100644
 +        }
 +    }
 +}
+diff --git a/gradle/kei.versions.toml b/gradle/kei.versions.toml
+index 1e05ca7..149d39b 100644
+--- a/gradle/kei.versions.toml
++++ b/gradle/kei.versions.toml
+@@ -1,6 +1,6 @@
+ [versions]
+ # Used in [/gradle/build-logic/src/main/kotlin/AndroidBasePlugin.kt]
+-android-sdk-min = "26"
++android-sdk-min = "21"
+ android-sdk-compile = "37"
+ android-sdk-target = "37"
+ java = "11"
 diff --git a/src/zh/copymanga/build.gradle.kts b/src/zh/copymanga/build.gradle.kts
-index f71c2f6..2a06f8e 100644
+index f71c2f6..3f64ab5 100644
 --- a/src/zh/copymanga/build.gradle.kts
 +++ b/src/zh/copymanga/build.gradle.kts
 @@ -11,21 +11,37 @@ android {
@@ -50,7 +62,7 @@ index f71c2f6..2a06f8e 100644
 +    pkgName = "zh.copymanga"
      versionCode.set(
 -        providers.gradleProperty("extensionReleaseVersionCode").map { it.toInt() }.orElse(8),
-+        providers.gradleProperty("extensionReleaseVersionCode").map { it.toInt() }.orElse(109),
++        providers.gradleProperty("extensionReleaseVersionCode").map { it.toInt() }.orElse(110),
      )
      contentWarning = ContentWarning.MIXED
      libVersion = "1.6"

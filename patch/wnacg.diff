@@ -367,7 +367,7 @@
 -    versionCode = 2
 +    pkgName = "zh.wnacg"
 +    // 官方当前是 106002；102 → 106102，长期压过上游，避免被官方包覆盖回去
-+    versionCode = 102
++    versionCode = 103
      contentWarning = ContentWarning.NSFW
      libVersion = "1.6"
  
@@ -411,3 +411,13 @@
 +        }
 +    }
 +}
+--- a/gradle/kei.versions.toml
++++ b/gradle/kei.versions.toml
+@@ -1,6 +1,6 @@
+ [versions]
+ # Used in [/gradle/build-logic/src/main/kotlin/AndroidBasePlugin.kt]
+-android-sdk-min = "26"
++android-sdk-min = "21"
+ android-sdk-compile = "37"
+ android-sdk-target = "37"
+ java = "11"

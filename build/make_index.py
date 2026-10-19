@@ -68,7 +68,13 @@ def load_entry(root: Path, info_path: Path) -> dict:
         "lib": meta["extensionLib"],
         "warning": meta["contentWarning"],
         "sources": [
-            {"id": s["id"], "lang": s["lang"], "name": s["name"], "baseUrl": s["baseUrl"]}
+            {
+                "id": s["id"],
+                "lang": s["lang"],
+                "name": s["name"],
+                "baseUrl": s["baseUrl"],
+                "versionId": 1,
+            }
             for s in meta["sources"]
         ],
     }
