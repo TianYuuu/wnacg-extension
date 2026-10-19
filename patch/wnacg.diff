@@ -366,12 +366,12 @@
      name = "WNACG"
 -    versionCode = 2
 +    pkgName = "zh.wnacg"
-+    // 官方当前是 106002；100 → 106100，长期压过上游，避免被官方包覆盖回去
-+    versionCode = 101
++    // 官方当前是 106002；102 → 106102，长期压过上游，避免被官方包覆盖回去
++    versionCode = 102
      contentWarning = ContentWarning.NSFW
      libVersion = "1.6"
  
-@@ -16,3 +20,16 @@
+@@ -16,3 +20,21 @@
          baseUrl = "https://www.wn07.cfd"
      }
  }
@@ -385,6 +385,29 @@
 +        named("release") {
 +            isMinifyEnabled = false
 +            isShrinkResources = false
++        }
++    }
++}
++
++// 关掉 R8 之后，插件里「生成扩展 jar」那两步会去找 R8 的 configuration.txt（已不存在），
++// 直接把这两步关掉 —— 我们发布的是 APK，这个 jar 用不上。
++tasks.matching { it.name == "createReleaseExtensionJar" || it.name == "signReleaseExtensionJar" }
++    .configureEach { enabled = false }
+--- a/build.gradle.kts
++++ b/build.gradle.kts
+@@ -20,3 +20,15 @@
+         }
+     }
+ }
++
++// 兼容 Tachimanga（iOS）：Kotlin 2.x 默认用 invokedynamic 生成 lambda，
++// D8 脱糖后会留下 `xxx_delegate$lambda$N` 这类合成方法，其字节码在
++// Tachimanga 的校验器下会抛 java.lang.VerifyError: JVMVRFY021。
++// 统一改成编译成普通类，字节码形态与 Kotlin 1.9 一致。
++subprojects {
++    tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>().configureEach {
++        compilerOptions {
++            freeCompilerArgs.addAll("-Xlambdas=class", "-Xsam-conversions=class")
 +        }
 +    }
 +}
