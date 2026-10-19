@@ -32,9 +32,12 @@ def tag(field: int, wire: int) -> bytes:
     return varint((field << 3) | wire)
 
 
-def pb_str(field: int, value: str) -> bytes:
-    raw = value.encode()
+def pb_bytes(field: int, raw: bytes) -> bytes:
     return tag(field, 2) + varint(len(raw)) + raw
+
+
+def pb_str(field: int, value: str) -> bytes:
+    return pb_bytes(field, value.encode())
 
 
 def pb_int(field: int, value: int) -> bytes:
@@ -69,7 +72,7 @@ def main() -> None:
     ext = (
         pb_str(1, meta["name"])
         + pb_str(2, meta["packageName"])
-        + pb_str(3, resources)
+        + pb_bytes(3, resources)
         + pb_str(4, meta["extensionLib"])
         + pb_int(5, meta["versionCode"])
         + pb_str(6, meta["versionName"])
@@ -80,8 +83,8 @@ def main() -> None:
         pb_str(1, STORE_NAME)
         + pb_str(2, STORE_SHORT)
         + pb_str(3, SIGNING_KEY)
-        + pb_str(4, pb_str(1, STORE_SITE))
-        + pb_str(101, pb_str(1, ext))
+        + pb_bytes(4, pb_str(1, STORE_SITE))
+        + pb_bytes(101, pb_str(1, ext))
     )
     (root / "index.pb").write_bytes(gzip.compress(store, 9, mtime=0))
 
