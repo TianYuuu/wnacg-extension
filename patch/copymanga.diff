@@ -1,0 +1,67 @@
+diff --git a/build.gradle.kts b/build.gradle.kts
+index 924c28c..1b62023 100644
+--- a/build.gradle.kts
++++ b/build.gradle.kts
+@@ -20,3 +20,14 @@ tasks {
+         }
+     }
+ }
++
++// 兼容 Tachimanga（iOS）：Kotlin 2.x 默认用 invokedynamic 生成 lambda，D8 脱糖后
++// 留下的合成方法在 Tachimanga 的校验器下会抛 java.lang.VerifyError: JVMVRFY021。
++// 统一改成编译成普通类，字节码形态与 Kotlin 1.9 一致。
++subprojects {
++    tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>().configureEach {
++        compilerOptions {
++            freeCompilerArgs.addAll("-Xlambdas=class", "-Xsam-conversions=class")
++        }
++    }
++}
+diff --git a/src/zh/copymanga/build.gradle.kts b/src/zh/copymanga/build.gradle.kts
+index f71c2f6..bbeaf8a 100644
+--- a/src/zh/copymanga/build.gradle.kts
++++ b/src/zh/copymanga/build.gradle.kts
+@@ -11,25 +11,39 @@ android {
+             kotlin.directories.add("test")
+         }
+     }
++
++    // 关闭 R8 压缩混淆：Tachimanga（iOS）的字节码校验器会拒绝 R8 优化后的字节码
++    // （java.lang.VerifyError: JVMVRFY021 class=k ...）。代价只是 APK 变大。
++    buildTypes {
++        named("release") {
++            isMinifyEnabled = false
++            isShrinkResources = false
++        }
++    }
+ }
+ 
+ tasks.matching { it.name.startsWith("ksp") && it.name.contains("UnitTest") }.configureEach {
+     enabled = false
+ }
+ 
++// 关掉 R8 之后，插件里「生成扩展 jar」那两步会去找 R8 的 configuration.txt（已不存在），
++// 我们发布的是 APK，这个 jar 用不上。
++tasks.matching { it.name == "createReleaseExtensionJar" || it.name == "signReleaseExtensionJar" }
++    .configureEach { enabled = false }
++
+ keiyoushi {
+-    name = "CopyManga"
++    name = "CopyManga+"
++    pkgName = "zh.copymangaph"
+     versionCode.set(
+-        providers.gradleProperty("extensionReleaseVersionCode").map { it.toInt() }.orElse(8),
++        providers.gradleProperty("extensionReleaseVersionCode").map { it.toInt() }.orElse(108),
+     )
+     contentWarning = ContentWarning.MIXED
+     libVersion = "1.6"
+ 
+     source {
+-        name = "拷贝漫画"
++        name = "拷贝漫画+"
+         lang = "zh"
+         baseUrl = "https://www.mangacopy.com"
+-        id = 6696312508930833206L
+     }
+ 
+     deeplink {
