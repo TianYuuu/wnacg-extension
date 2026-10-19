@@ -367,7 +367,24 @@
 -    versionCode = 2
 +    pkgName = "zh.wnacg"
 +    // 官方当前是 106002；100 → 106100，长期压过上游，避免被官方包覆盖回去
-+    versionCode = 100
++    versionCode = 101
      contentWarning = ContentWarning.NSFW
      libVersion = "1.6"
  
+@@ -16,3 +20,16 @@
+         baseUrl = "https://www.wn07.cfd"
+     }
+ }
++
++// 关掉 R8 压缩混淆：
++//  - Tachimanga（iOS）的字节码校验器会拒绝 R8 优化后的字节码
++//    （java.lang.VerifyError: JVMVRFY021 class=k ...）；
++//  - 不混淆对功能没有影响，代价只是 APK 从 68KB 涨到几百 KB。
++android {
++    buildTypes {
++        named("release") {
++            isMinifyEnabled = false
++            isShrinkResources = false
++        }
++    }
++}
