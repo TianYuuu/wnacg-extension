@@ -84,7 +84,7 @@ def main() -> None:
         + pb_str(2, STORE_SHORT)
         + pb_str(3, SIGNING_KEY)
         + pb_bytes(4, pb_str(1, STORE_SITE))
-        + pb_bytes(101, pb_str(1, ext))
+        + pb_bytes(101, pb_bytes(1, ext))
     )
     (root / "index.pb").write_bytes(gzip.compress(store, 9, mtime=0))
 
