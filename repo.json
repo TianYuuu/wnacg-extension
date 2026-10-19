@@ -1,8 +1,8 @@
 {
   "index_v2": null,
   "meta": {
-    "name": "WNACG 自建源",
-    "shortName": "WNACG",
+    "name": "自建扩展源",
+    "shortName": "SELF",
     "website": "https://github.com/TianYuuu/wnacg-extension",
     "signingKeyFingerprint": "596be49ff9db3968db22dfa0c6a0390764353730770b83b1250f3270aea3e27c"
   }
