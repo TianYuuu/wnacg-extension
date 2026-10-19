@@ -65,7 +65,10 @@ def main() -> None:
     (root / "index.min.json").write_text(json.dumps([entry], ensure_ascii=False, indent=2) + "\n")
 
     sources = b"".join(
-        pb_int(1, s["id"]) + pb_str(2, s["name"]) + pb_str(3, s["lang"]) + pb_str(4, s["baseUrl"])
+        pb_bytes(
+            8,
+            pb_int(1, s["id"]) + pb_str(2, s["name"]) + pb_str(3, s["lang"]) + pb_str(4, s["baseUrl"]),
+        )
         for s in meta["sources"]
     )
     resources = pb_str(1, f"{BASE}/apk/{apk}") + pb_str(2, f"{BASE}/icon/{meta['packageName']}.png")
