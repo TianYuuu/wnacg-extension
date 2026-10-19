@@ -12,7 +12,7 @@
 | 搜索内筛分类 / 多标签 | 一次请求带上 `cate=` 与 `tag=a,b`（AND），不必「先搜再筛」 |
 | 去掉了「跟随默认」中间态 | 榜单下拉永远是一个具体周期，显示什么就是什么 |
 | 修掉小毛病 | 分类表补上「韩漫-合集」、去掉重复的「杂志&短篇-汉语」 |
-| 关闭 R8 混淆 | 否则 Tachimanga（iOS）会 `VerifyError: JVMVRFY021`；代价是 APK 从 68KB 变 189KB |
+| 关闭 R8 混淆 + lambda 编译为类 | 否则 Tachimanga（iOS）会两次 `VerifyError: JVMVRFY021`（先 `class=k`，再 `KeiSource.client_delegate$lambda$`）；代价是 APK 从 68KB 变 192KB |
 
 功能细节见 [`patch/改造说明.md`](patch/改造说明.md)。
 
@@ -46,7 +46,7 @@ id   6551136894818591762   ← 与官方相同
 
 ### 装不上时的排查顺序
 
-1. **列表里有没有出现 WNACG 1.6.101？**
+1. **列表里有没有出现 WNACG 1.6.102？**
    - 没有 → 仓库地址没生效。确认地址以 `/index.pb` 或 `/index.min.json` 结尾，重新添加后下拉刷新。
 2. **点安装没反应 / 报签名错误？**
    - 官方「紳士漫畫」还装着。Tachimanga 里也要卸载它（扩展 → 找到 WNACG → 卸载），再装本仓库的版本。
@@ -54,7 +54,7 @@ id   6551136894818591762   ← 与官方相同
    - 检查内容过滤/18+ 设置；本扩展 `contentWarning = NSFW`。
    - 扩展详情里有「信任 / Trust」按钮的话点一下（自建仓库必须手动信任）。
 4. **实在不行就手动装**：下载
-   `https://raw.githubusercontent.com/TianYuuu/wnacg-extension/repo/apk/tachiyomi-zh.wnacg-v1.6.101.apk`
+   `https://raw.githubusercontent.com/TianYuuu/wnacg-extension/repo/apk/tachiyomi-zh.wnacg-v1.6.102.apk`
    在 Tachimanga 的扩展页用 `+` → 从文件安装。
 
 ## 自己重建 / 发版
@@ -71,7 +71,7 @@ KEY_STORE_PASSWORD=*** KEY_PASSWORD=*** \
 
 发版流程：
 
-1. 改 `patch/wnacg.diff` 里的 `versionCode`（当前 100 → `1.6.101`，官方是 `1.6.2 / 106002`，
+1. 改 `patch/wnacg.diff` 里的 `versionCode`（当前 100 → `1.6.102`，官方是 `1.6.2 / 106002`，
    保持高于官方就不会被上游覆盖）。
 2. 重新生成补丁：在上游工作区改完代码后 `git diff > patch/wnacg.diff`。
 3. 跑 `build.sh`，提交并推 `repo` 分支。
@@ -87,7 +87,7 @@ main 分支
 repo 分支（客户端读取的）
   index.min.json                           旧格式索引，兼容 Mihon / Komikku / TachiManga
   repo.json                                仓库元信息 + 签名指纹
-  apk/tachiyomi-zh.wnacg-v1.6.101.apk      扩展本体
+  apk/tachiyomi-zh.wnacg-v1.6.102.apk      扩展本体
   icon/eu.kanade.tachiyomi.extension.zh.wnacg.png
 ```
 
