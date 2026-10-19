@@ -30,16 +30,31 @@ id   6551136894818591762   ← 与官方相同
 
 ## 安装
 
-1. 在客户端里添加仓库（三端通用，地址任选其一）：
+1. 在客户端里添加仓库（新客户端用 `index.pb`，老客户端用 `index.min.json`，两者内容一致）：
    ```
+   https://raw.githubusercontent.com/TianYuuu/wnacg-extension/repo/index.pb
    https://raw.githubusercontent.com/TianYuuu/wnacg-extension/repo/index.min.json
-   https://cdn.jsdelivr.net/gh/TianYuuu/wnacg-extension@repo/index.min.json
    ```
    - Mihon：设置 → 浏览 → 扩展 → 右上角「扩展仓库」→ 添加
    - Komikku：浏览 → 扩展 → 右上角菜单 → 扩展仓库 → 添加
-2. 卸载官方「紳士漫畫」（签名不同，不卸载装不上）。
+   - Tachimanga（iOS）：浏览 → 扩展 → 该页设置 → Extension Repos → `+`
+2. **先卸载官方「紳士漫畫」**（同包名、签名不同，不卸载装不上）。每个客户端各自装各自的扩展，
+   Android 上卸了不影响 iOS，iOS（Tachimanga）里也要单独卸一次。
 3. 在扩展列表里找到本仓库的 **WNACG**，安装。
 4. 打开漫画库，原收藏应照常能打开、能继续读。
+
+### 装不上时的排查顺序
+
+1. **列表里有没有出现 WNACG 1.6.100？**
+   - 没有 → 仓库地址没生效。确认地址以 `/index.pb` 或 `/index.min.json` 结尾，重新添加后下拉刷新。
+2. **点安装没反应 / 报签名错误？**
+   - 官方「紳士漫畫」还装着。Tachimanga 里也要卸载它（扩展 → 找到 WNACG → 卸载），再装本仓库的版本。
+3. **装完源不出现？**
+   - 检查内容过滤/18+ 设置；本扩展 `contentWarning = NSFW`。
+   - 扩展详情里有「信任 / Trust」按钮的话点一下（自建仓库必须手动信任）。
+4. **实在不行就手动装**：下载
+   `https://raw.githubusercontent.com/TianYuuu/wnacg-extension/repo/apk/tachiyomi-zh.wnacg-v1.6.100.apk`
+   在 Tachimanga 的扩展页用 `+` → 从文件安装。
 
 ## 自己重建 / 发版
 
