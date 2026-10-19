@@ -18,10 +18,10 @@ index 924c28c..1b62023 100644
 +    }
 +}
 diff --git a/src/zh/copymanga/build.gradle.kts b/src/zh/copymanga/build.gradle.kts
-index f71c2f6..bbeaf8a 100644
+index f71c2f6..2a06f8e 100644
 --- a/src/zh/copymanga/build.gradle.kts
 +++ b/src/zh/copymanga/build.gradle.kts
-@@ -11,25 +11,39 @@ android {
+@@ -11,21 +11,37 @@ android {
              kotlin.directories.add("test")
          }
      }
@@ -46,22 +46,17 @@ index f71c2f6..bbeaf8a 100644
 +    .configureEach { enabled = false }
 +
  keiyoushi {
--    name = "CopyManga"
-+    name = "CopyManga+"
-+    pkgName = "zh.copymangaph"
+     name = "CopyManga"
++    pkgName = "zh.copymanga"
      versionCode.set(
 -        providers.gradleProperty("extensionReleaseVersionCode").map { it.toInt() }.orElse(8),
-+        providers.gradleProperty("extensionReleaseVersionCode").map { it.toInt() }.orElse(108),
++        providers.gradleProperty("extensionReleaseVersionCode").map { it.toInt() }.orElse(109),
      )
      contentWarning = ContentWarning.MIXED
      libVersion = "1.6"
  
      source {
--        name = "拷贝漫画"
-+        name = "拷贝漫画+"
++        // 包名、源名、源 id 都与原版一致，装好后旧的收藏/进度直接沿用
+         name = "拷贝漫画"
          lang = "zh"
          baseUrl = "https://www.mangacopy.com"
--        id = 6696312508930833206L
-     }
- 
-     deeplink {

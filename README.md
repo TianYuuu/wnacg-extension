@@ -1,11 +1,11 @@
-# 自建扩展源（WNACG · CopyManga+）
+# TianYuuu 自建扩展源（WNACG · CopyManga）
 
-自建的 [Tachiyomi / Mihon / Komikku](https://github.com/mihonapp/mihon) 扩展仓库。目前两个扩展：
+自建的 [Tachiyomi / Mihon / Komikku](https://github.com/mihonapp/mihon) 扩展仓库（客户端里显示为 **TianYuuu**）。目前两个扩展：
 
 | 扩展 | 包名 | 源 | 说明 |
 | --- | --- | --- | --- |
 | **WNACG** | `…zh.wnacg` | 紳士漫畫 | 榜单 × 分类、搜索周期排序、多标签 AND；与官方同包名同 id，**替代**官方版 |
-| **CopyManga+** | `…zh.copymangaph` | 拷贝漫画+ | 新增排行榜（男频/女频 × 日/周/月/总榜）；新包名，**可与原版共存** |
+| **CopyManga** | `…zh.copymanga` | 拷贝漫画 | 新增排行榜（男频/女频 × 日/周/月/总榜）；同包名同源 id，**替换原版、收藏沿用** |
 
 ## 安装
 
@@ -24,7 +24,8 @@ https://cdn.jsdelivr.net/gh/TianYuuu/wnacg-extension@repo/index.pb     ← GitHu
 然后：
 
 - **WNACG**：先卸载官方「紳士漫畫」（同包名、签名不同），再安装本仓库版本。收藏不需迁移。
-- **CopyManga+**：直接装，**不需要卸载原来的「拷貝漫畫 / CopyManga」**，两者并存。
+- **CopyManga**：先卸载原来的「拷貝漫畫 / CopyManga」（同包名不同签名），再安装本仓库版本。
+  源 id 与原版相同，旧收藏、阅读进度会直接指向新版本。
 
 ---
 
@@ -58,7 +59,7 @@ id   6551136894818591762   ← 与官方相同
 
 ---
 
-## 二、CopyManga+
+## 二、CopyManga
 
 ### 新增了什么
 
@@ -96,10 +97,16 @@ GET /api/v3/ranks?audience_type=novel
 
 ### 与原版的关系
 
-新包名 `…zh.copymangaph`、源名「拷贝漫画+」，因此**和原版共存**，互不影响；
-代价是同一作品在两边的收藏/进度各自独立。想让它替代原版的话，把 `build.gradle.kts` 里
-`pkgName` 删掉、`source { name = "拷贝漫画" }` 改回原名，重新编译即可（源 id 随之回到原版的
-`6696312508930833206`，收藏可沿用）。
+包名、源名、源 id 与原版**完全一致**：
+
+```
+pkg  eu.kanade.tachiyomi.extension.zh.copymanga
+源名 拷贝漫画
+id   6696312508930833206   ← 由「拷贝漫画 / zh / 1」算出的原版 id
+```
+
+所以装好后**原有收藏、阅读进度、章节记录都会指向这个版本**，不需要迁移。
+代价是同包名不同签名，必须先卸载原版扩展（卸载扩展不影响漫画库数据）。
 
 ---
 
@@ -117,7 +124,7 @@ KEY_STORE_PASSWORD=*** KEY_PASSWORD=*** \
 
 发版流程：
 
-1. 改 `build.gradle.kts` 里的 `versionCode`（WNACG 当前 102；CopyManga+ 当前 108）；
+1. 改 `build.gradle.kts` 里的 `versionCode`（WNACG 当前 102；CopyManga 当前 109）；
 2. 在上游工作区改完代码后 `git diff > patch/xxx.diff`；
 3. 跑 `build.sh`，提交并推 `repo` 分支。
 
@@ -136,9 +143,9 @@ repo 分支（客户端读取的）
   index.pb                                           protobuf 索引（Tachimanga / 新版 Mihon）
   repo.json                                          仓库元信息 + 签名指纹
   apk/tachiyomi-zh.wnacg-v1.6.102.apk
-  apk/tachiyomi-zh.copymangaph-v1.6.108.apk
+  apk/tachiyomi-zh.copymanga-v1.6.109.apk
   icon/eu.kanade.tachiyomi.extension.zh.wnacg.png
-  icon/eu.kanade.tachiyomi.extension.zh.copymangaph.png
+  icon/eu.kanade.tachiyomi.extension.zh.copymanga.png
 ```
 
 index 的目录约定（Mihon 的解析方式）：

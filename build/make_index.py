@@ -16,8 +16,8 @@ import sys
 from pathlib import Path
 
 SIGNING_KEY = "596be49ff9db3968db22dfa0c6a0390764353730770b83b1250f3270aea3e27c"
-STORE_NAME = "自建扩展源"
-STORE_SHORT = "SELF"
+STORE_NAME = "TianYuuu"
+STORE_SHORT = "TianYuuu"
 STORE_SITE = "https://github.com/TianYuuu/wnacg-extension"
 BASE = "https://raw.githubusercontent.com/TianYuuu/wnacg-extension/repo"
 PKG_PREFIX = "eu.kanade.tachiyomi.extension."
