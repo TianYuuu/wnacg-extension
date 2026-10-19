@@ -1,0 +1,373 @@
+--- a/src/zh/wnacg/src/eu/kanade/tachiyomi/extension/zh/wnacg/WNACG.kt
++++ b/src/zh/wnacg/src/eu/kanade/tachiyomi/extension/zh/wnacg/WNACG.kt
+@@ -60,7 +60,8 @@
+ 
+         return fetchFilteredMangaPage(
+             appPage = page,
+-            key = "$maxScanPages|${blacklist.joinToString("\u0000")}",
++            // 榜单周期也参与分页游标的 key，切换设置后不会沿用旧的偏移量
++            key = "${preferences.defaultRankingType}|$maxScanPages|${blacklist.joinToString("\u0000")}",
+             state = popularPagingState,
+             urlForPage = ::popularMangaUrl,
+             blacklist = blacklist,
+@@ -110,25 +111,68 @@
+     }
+ 
+     private fun searchMangaUrl(page: Int, query: String, filters: FilterList): String {
++        val rankingFilter = filters.firstInstanceOrNull<RankingFilter>()
++        // 榜单筛选默认就带着设置里的值（下拉框显示的就是实际用的），这里只处理筛选器缺失的情况
++        val filterType = rankingFilter?.type ?: preferences.searchRankingType
++        val cateId = filters.firstInstanceOrNull<CategoryFilter>()?.cateId ?: NO_CATE
++        val tags = filters.firstInstanceOrNull<TagFilter>()?.state
++            ?.splitTags()
++            .orEmpty()
++
+         if (query.isBlank()) {
+-            val tagFilter = filters.firstInstanceOrNull<TagFilter>()
+-            if (tagFilter != null && tagFilter.state.isNotEmpty()) {
+-                return "$baseUrl/albums-index-page-$page-tag-${tagFilter.state}.html"
++            // 不带关键词时只能用列表页：列表页只认单个标签，且标签与分类不能同时用
++            if (tags.isNotEmpty()) {
++                return "$baseUrl/albums-index-page-$page-tag-${tags.first()}.html"
+             }
+-            val categoryFilter = filters.firstInstanceOrNull<CategoryFilter>()
+-            if (categoryFilter != null && categoryFilter.toUriPart().isNotEmpty()) {
+-                return "$baseUrl/${categoryFilter.toUriPart().format(page)}"
++            return listUrl(page, filterType, cateId)
++        }
++
++        // 关键词搜索：站点的 s 参数支持与榜单一样的 5 种排序
++        val type = filterType
++        val sort = when (type) {
++            "day" -> "heat_day_DESC"
++            "week" -> "heat_week_DESC"
++            "month" -> "heat_month_DESC"
++            "year" -> "heat_year_DESC"
++            else -> "create_time_DESC" // 最近更新
++        }
++
++        // 记录本次实际发出的排序参数，在筛选面板顶部显示，方便核对客户端传进来的状态
++        if (page == 1) {
++            preferences.lastSearchSort = buildString {
++                append(if (rankingFilter == null) "无榜单筛选器 → 用设置默认" else "榜单=${rankingFilter.label}")
++                append("，s=$sort")
++                if (cateId >= 0) append("，cate=$cateId")
++                if (tags.isNotEmpty()) append("，tag=${tags.joinToString(",")}")
+             }
+-            return popularMangaUrl(page)
+         }
++
+         return "$baseUrl/search/index.php".toHttpUrl().newBuilder()
+-            .addQueryParameter("s", "create_time_DESC")
++            .addQueryParameter("s", sort)
+             .addQueryParameter("q", query)
+             .addQueryParameter("p", page.toString())
++            // 分类：站点搜索支持 cate=6 或 cate=6,5（逗号＝并集），这里用单选值
++            .apply { if (cateId >= 0) addQueryParameter("cate", cateId.toString()) }
++            // 标签：多个用逗号连接，站点语义是「必须同时具备」
++            .apply { if (tags.isNotEmpty()) addQueryParameter("tag", tags.joinToString(",")) }
+             .build()
+             .toString()
+     }
+ 
++    /**
++     * 拼列表 URL：榜单类型和分类可任意组合。
++     *  - type 为空 → 最近更新：/albums-index-page-{page}[-cate-{id}].html
++     *  - type 非空 → 收藏排行：/albums-favorite_ranking-page-{page}-type-{type}[-cate-{id}].html
++     */
++    private fun listUrl(page: Int, type: String, cateId: Int): String {
++        val cate = if (cateId >= 0) "-cate-$cateId" else ""
++        return if (type.isEmpty()) {
++            "$baseUrl/albums-index-page-$page$cate.html"
++        } else {
++            "$baseUrl/albums-favorite_ranking-page-$page-type-$type$cate.html"
++        }
++    }
++
+     override suspend fun getMangaByUrl(url: HttpUrl): SManga? {
+         if (url.host != baseUrl.toHttpUrl().host || !mangaUrlRegex.matches(url.encodedPath)) return null
+ 
+@@ -160,10 +204,12 @@
+     }
+ 
+     override fun getFilterList(data: JsonElement?) = FilterList(
+-        Filter.Header("注意：分类和标签均不支持搜索"),
++        Filter.Header(preferences.lastSearchSort.ifEmpty { "尚未搜索过" }.let { "上次搜索实际请求：$it" }),
++        Filter.Header("榜单对列表和搜索都生效，默认选中项可在扩展设置里改"),
++        RankingFilter(preferences.searchRankingType),
+         CategoryFilter(),
+         Filter.Separator(),
+-        Filter.Header("注意：仅支持 1 个标签，不支持分类"),
++        Filter.Header("标签：填关键词搜索时多个标签是「同时具备」；不带关键词时只认第一个"),
+         TagFilter(),
+     )
+ 
+@@ -214,9 +260,10 @@
+         throw Exception("连续 $maxScanPages 页均无可显示结果，请调整黑名单或扫描页数后刷新。")
+     }
+ 
+-    private fun popularMangaUrl(page: Int) = "$baseUrl/albums-favorite_ranking-page-$page-type-week.html"
++    // 热门页的榜单周期由扩展设置决定（今日 / 本周 / 本月 / 今年），默认本周
++    private fun popularMangaUrl(page: Int) = listUrl(page, preferences.defaultRankingType, NO_CATE)
+ 
+-    private fun latestUpdatesUrl(page: Int) = "$baseUrl/albums-index-page-$page.html"
++    private fun latestUpdatesUrl(page: Int) = listUrl(page, "", NO_CATE)
+ 
+     private fun mangaDetailsParse(document: Document): SManga = SManga.create().apply {
+         title = document.selectFirst("h2")!!.text()
+@@ -274,6 +321,7 @@
+     }
+ 
+     companion object {
++        private const val NO_CATE = -1
+         private val pageImageRegex = Regex(
+             """//[^\s"'\\]+\.(?:jpeg|jpg|png|webp|gif)(?:\?[^\s"'\\]*)?""",
+             RegexOption.IGNORE_CASE,
+@@ -320,3 +368,8 @@
+         this.offset = offset
+     }
+ }
++
++/** 标签输入支持「A B」「A,B」「A，B」，站点语义为"必须同时具备" */
++private fun String.splitTags(): List<String> = split(',', '，', ' ', '　')
++    .map { it.trim() }
++    .filter { it.isNotEmpty() }
+--- a/src/zh/wnacg/src/eu/kanade/tachiyomi/extension/zh/wnacg/Filters.kt
++++ b/src/zh/wnacg/src/eu/kanade/tachiyomi/extension/zh/wnacg/Filters.kt
+@@ -2,39 +2,75 @@
+ 
+ import eu.kanade.tachiyomi.source.model.Filter
+ 
+-class TagFilter : Filter.Text(name = "标签")
++// 榜单选项。第二项是 URL 里的 type，空串 = 最近更新（普通列表）
++private val RANKING_OPTIONS = arrayOf(
++    "最近更新" to "",
++    "今日排行" to "day",
++    "本周排行" to "week",
++    "本月排行" to "month",
++    "今年排行" to "year",
++)
+ 
++// 第二项是站点 URL 里的 cate 编号，-1 表示不带 cate 参数（全部分类）
++private val CATEGORIES = arrayOf(
++    "全部分类" to -1,
++    "同人志" to 5,
++    "同人志-汉化" to 1,
++    "同人志-日语" to 12,
++    "同人志-English" to 16,
++    "同人志-CG画集" to 2,
++    "写真&Cosplay" to 3,
++    "单行本" to 6,
++    "单行本-汉化" to 9,
++    "单行本-日语" to 13,
++    "单行本-English" to 17,
++    "杂志&短篇" to 7,
++    "杂志&短篇-汉化" to 10,
++    "杂志&短篇-日语" to 14,
++    "杂志&短篇-English" to 18,
++    "韩漫" to 19,
++    "韩漫-汉化" to 20,
++    "韩漫-生肉" to 21,
++    "韩漫-合集" to 38,
++    "3D&漫画" to 22,
++    "3D&漫画-汉化" to 23,
++    "3D&漫画-其他" to 24,
++    "AI图集" to 37,
++)
++
++/**
++ * 榜单类型。站点支持两类列表 URL，并且都可以再拼 -cate-{id}：
++ *  - 普通列表：/albums-index-page-{page}.html
++ *  - 收藏排行：/albums-favorite_ranking-page-{page}-type-{day|week|month|year}.html
++ *
++ * 默认选中项由扩展设置决定（构造时传入），所以下拉框里永远是一个具体周期，
++ * 不会出现「跟随默认」这种需要猜的中间态。
++ */
++class RankingFilter(defaultType: String = "") :
++    Filter.Select<String>(
++        "榜单",
++        RANKING_OPTIONS.map { it.first }.toTypedArray(),
++    ) {
++    init {
++        val index = RANKING_OPTIONS.indexOfFirst { it.second == defaultType }
++        state = if (index >= 0) index else 0
++    }
++
++    val type: String
++        get() = RANKING_OPTIONS.getOrNull(state)?.second ?: ""
++
++    /** 当前选中项的名字，供自检信息显示 */
++    val label: String
++        get() = RANKING_OPTIONS.getOrNull(state)?.first ?: "未知($state)"
++}
++
+ class CategoryFilter :
+-    UriPartFilter(
++    Filter.Select<String>(
+         "分类",
+-        arrayOf(
+-            Pair("", ""),
+-            Pair("更新", "albums-index-page-%d.html"),
+-            Pair("同人志", "albums-index-page-%d-cate-5.html"),
+-            Pair("同人志-汉化", "albums-index-page-%d-cate-1.html"),
+-            Pair("同人志-日语", "albums-index-page-%d-cate-12.html"),
+-            Pair("同人志-English（英语）", "albums-index-page-%d-cate-16.html"),
+-            Pair("同人志-CG书籍", "albums-index-page-%d-cate-2.html"),
+-            Pair("写真&Cosplay", "albums-index-page-%d-cate-3.html"),
+-            Pair("单行本", "albums-index-page-%d-cate-6.html"),
+-            Pair("单行本-汉化", "albums-index-page-%d-cate-9.html"),
+-            Pair("单行本-English（英语）", "albums-index-page-%d-cate-17.html"),
+-            Pair("单行本-日语", "albums-index-page-%d-cate-13.html"),
+-            Pair("杂志&短篇-汉语", "albums-index-page-%d-cate-7.html"),
+-            Pair("杂志&短篇-汉语", "albums-index-page-%d-cate-10.html"),
+-            Pair("杂志&短篇-日语", "albums-index-page-%d-cate-14.html"),
+-            Pair("杂志&短篇-English（英语）", "albums-index-page-%d-cate-18.html"),
+-            Pair("韩漫", "albums-index-page-%d-cate-19.html"),
+-            Pair("韩漫-汉化", "albums-index-page-%d-cate-20.html"),
+-            Pair("韩漫-生肉", "albums-index-page-%d-cate-21.html"),
+-            Pair("3D&漫画", "albums-index-page-%d-cate-22.html"),
+-            Pair("3D&漫画-汉语", "albums-index-page-%d-cate-23.html"),
+-            Pair("3D&漫画-其他", "albums-index-page-%d-cate-24.html"),
+-            Pair("AI图集", "albums-index-page-%d-cate-37.html"),
+-            Pair("未分類相冊", "albums-index-page-%d-cate-0.html"),
+-        ),
+-    )
+-
+-open class UriPartFilter(displayName: String, val vals: Array<Pair<String, String>>) : Filter.Select<String>(displayName, vals.map { it.first }.toTypedArray()) {
+-    fun toUriPart() = vals[state].second
++        CATEGORIES.map { it.first }.toTypedArray(),
++    ) {
++    val cateId: Int
++        get() = CATEGORIES.getOrNull(state)?.second ?: -1
+ }
++
++class TagFilter : Filter.Text(name = "标签（多个用空格或逗号隔开，需同时具备；无关键词时只取第一个）")
+--- a/src/zh/wnacg/src/eu/kanade/tachiyomi/extension/zh/wnacg/Preferences.kt
++++ b/src/zh/wnacg/src/eu/kanade/tachiyomi/extension/zh/wnacg/Preferences.kt
+@@ -7,6 +7,7 @@
+ import androidx.preference.EditTextPreference
+ import androidx.preference.ListPreference
+ import androidx.preference.SwitchPreferenceCompat
++import eu.kanade.tachiyomi.extension.BuildConfig
+ import eu.kanade.tachiyomi.network.GET
+ import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
+ import okhttp3.Interceptor
+@@ -23,7 +24,7 @@
+ ) = arrayOf(
+     ListPreference(context).apply {
+         key = URL_INDEX_PREF
+-        title = "网址"
++        title = "网址 · 扩展 v${BuildConfig.VERSION_NAME}"
+         summary = if (isUrlUpdated) "%s\n网址已自动更新，请重启应用。" else "%s\n正常情况下会自动更新。重启生效。"
+ 
+         val options = preferences.urlList
+@@ -32,6 +33,32 @@
+         entryValues = Array(count, Int::toString)
+     },
+ 
++    ListPreference(context).apply {
++        key = DEFAULT_RANKING_PREF
++        title = "热门页榜单"
++        summary = defaultRankingSummary(preferences.defaultRankingType)
++        entries = RANKING_LABELS
++        entryValues = RANKING_TYPES
++        setDefaultValue(DEFAULT_RANKING_DEFAULT)
++        setOnPreferenceChangeListener { _, newValue ->
++            summary = defaultRankingSummary(newValue as String)
++            true
++        }
++    },
++
++    ListPreference(context).apply {
++        key = SEARCH_RANKING_PREF
++        title = "筛选面板默认榜单"
++        summary = searchRankingSummary(preferences.searchRankingType)
++        entries = RANKING_LABELS
++        entryValues = RANKING_TYPES
++        setDefaultValue(SEARCH_RANKING_DEFAULT)
++        setOnPreferenceChangeListener { _, newValue ->
++            summary = searchRankingSummary(newValue as String)
++            true
++        }
++    },
++
+     EditTextPreference(context).apply {
+         key = TITLE_BLACKLIST_PREF
+         title = "标题屏蔽关键词"
+@@ -85,6 +112,25 @@
+     .toValidUrlList()
+     .ifEmpty { DEFAULT_LIST.toValidUrlList() }
+ 
++// 浏览 / 热门页用的默认榜单（旧 key 沿用，避免老用户设置丢失）
++val SharedPreferences.defaultRankingType: String
++    get() = getString(DEFAULT_RANKING_PREF, DEFAULT_RANKING_DEFAULT)
++        ?.takeIf { it in RANKING_TYPES }
++        ?: DEFAULT_RANKING_DEFAULT
++
++// 搜索关键词时用的默认榜单
++val SharedPreferences.searchRankingType: String
++    get() = getString(SEARCH_RANKING_PREF, SEARCH_RANKING_DEFAULT)
++        ?.takeIf { it in RANKING_TYPES }
++        ?: SEARCH_RANKING_DEFAULT
++
++/** 上一次搜索实际发出的排序参数，仅用于在筛选面板顶部自检显示 */
++var SharedPreferences.lastSearchSort: String
++    get() = getString(LAST_SEARCH_SORT_PREF, "") ?: ""
++    set(value) {
++        edit().putString(LAST_SEARCH_SORT_PREF, value).apply()
++    }
++
+ val SharedPreferences.titleBlacklist: List<String>
+     get() = getString(TITLE_BLACKLIST_PREF, "")
+         .orEmpty()
+@@ -104,6 +150,22 @@
+ private fun titleBlacklistSummary(value: String?) = value?.takeIf(String::isNotBlank)?.let { "$it\n$TITLE_BLACKLIST_SUMMARY" }
+     ?: TITLE_BLACKLIST_SUMMARY
+ 
++private val RANKING_TYPES = arrayOf("day", "week", "month", "year")
++private val RANKING_LABELS = arrayOf("今日排行", "本周排行", "本月排行", "今年排行")
++
++private fun rankingLabel(value: String) = when (value) {
++    "day" -> "今日排行"
++    "month" -> "本月排行"
++    "year" -> "今年排行"
++    else -> "本周排行"
++}
++
++private fun defaultRankingSummary(value: String) =
++    "当前：${rankingLabel(value)}。点进源时「热门」标签用它，默认本周；想换周期在筛选面板里选。"
++
++private fun searchRankingSummary(value: String) =
++    "当前：${rankingLabel(value)}。筛选面板里「榜单」默认就选中它，搜索关键词时也按它排序，默认今年。"
++
+ private fun maxScanPagesSummary(value: Int) = "当前值：$value\n$BLACKLIST_MAX_SCAN_PAGES_SUMMARY"
+ 
+ fun getCiBaseUrl() = DEFAULT_LIST.replace(",", "#, ")
+@@ -185,6 +247,11 @@
+     .filter { it.toHttpUrlOrNull() != null }
+ 
+ private const val DEFAULT_LIST_PREF = "defaultBaseUrl"
++private const val DEFAULT_RANKING_PREF = "hotRankingType"
++private const val SEARCH_RANKING_PREF = "searchRankingType"
++private const val LAST_SEARCH_SORT_PREF = "lastSearchSort"
++private const val DEFAULT_RANKING_DEFAULT = "week"
++private const val SEARCH_RANKING_DEFAULT = "year"
+ private const val URL_LIST_PREF = "baseUrlList"
+ private const val URL_INDEX_PREF = "baseUrlIndex"
+ private const val TITLE_BLACKLIST_PREF = "titleBlacklist"
+--- a/src/zh/wnacg/build.gradle.kts
++++ b/src/zh/wnacg/build.gradle.kts
+@@ -5,8 +5,12 @@
+ }
+ 
+ keiyoushi {
++    // 与官方扩展完全一致的 name + pkgName + source.name，
++    // 这样源 id（MD5("紳士漫畫/zh/1")）与官方一致，原有收藏/历史不会失联。
+     name = "WNACG"
+-    versionCode = 2
++    pkgName = "zh.wnacg"
++    // 官方当前是 106002；100 → 106100，长期压过上游，避免被官方包覆盖回去
++    versionCode = 100
+     contentWarning = ContentWarning.NSFW
+     libVersion = "1.6"
+ 
