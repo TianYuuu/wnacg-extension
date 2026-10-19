@@ -124,7 +124,7 @@ KEY_STORE_PASSWORD=*** KEY_PASSWORD=*** \
 
 发版流程：
 
-1. 改 `build.gradle.kts` 里的 `versionCode`（WNACG 当前 103；CopyManga 当前 110）；
+1. 改 `build.gradle.kts` 里的 `versionCode`（WNACG 当前 103；CopyManga 当前 111）；
 2. 在上游工作区改完代码后 `git diff > patch/xxx.diff`；
 3. 跑 `build.sh`，提交并推 `repo` 分支。
 
@@ -133,7 +133,7 @@ KEY_STORE_PASSWORD=*** KEY_PASSWORD=*** \
 ```
 main 分支
   patch/wnacg.diff        相对 keiyoushi/extensions-source 的补丁（5 个文件）
-  patch/copymanga.diff    相对 coffee522/extensions-copymanga 的补丁（2 个文件）
+  patch/copymanga.diff    相对 coffee522/extensions-copymanga 的补丁（3 个文件）
   patch/改造说明.md        WNACG 改动清单与技术细节
   build/build.sh          一键重建（两个扩展）
   build/make_index.py     生成 index.pb / index.min.json / repo.json（支持多扩展）
@@ -143,7 +143,7 @@ repo 分支（客户端读取的）
   index.pb                                           protobuf 索引（Tachimanga / 新版 Mihon）
   repo.json                                          仓库元信息 + 签名指纹
   apk/tachiyomi-zh.wnacg-v1.6.103.apk
-  apk/tachiyomi-zh.copymanga-v1.6.110.apk
+  apk/tachiyomi-zh.copymanga-v1.6.111.apk
   icon/eu.kanade.tachiyomi.extension.zh.wnacg.png
   icon/eu.kanade.tachiyomi.extension.zh.copymanga.png
 ```

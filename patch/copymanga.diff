@@ -30,10 +30,10 @@ index 1e05ca7..149d39b 100644
  android-sdk-target = "37"
  java = "11"
 diff --git a/src/zh/copymanga/build.gradle.kts b/src/zh/copymanga/build.gradle.kts
-index f71c2f6..3f64ab5 100644
+index f71c2f6..0d44561 100644
 --- a/src/zh/copymanga/build.gradle.kts
 +++ b/src/zh/copymanga/build.gradle.kts
-@@ -11,21 +11,37 @@ android {
+@@ -11,21 +11,56 @@ android {
              kotlin.directories.add("test")
          }
      }
@@ -45,6 +45,25 @@ index f71c2f6..3f64ab5 100644
 +            isMinifyEnabled = false
 +            isShrinkResources = false
 +        }
++    }
++}
++
++// Tachimanga（iOS）运行时自带的是旧版 kotlinx-serialization（GeneratedSerializer 只有
++// DefaultImpls，没有新式默认方法）。而 1.10+ 的 core 里该接口改成了 JVM 默认方法，编译后
++// D8 会生成对 GeneratedSerializer$-CC 的静态调用，旧运行时里没有这个类，于是抛
++// java.lang.NoClassDefFoundError: kotlinx/serialization/internal/GeneratedSerializer$_CC。
++// 这里把编译期使用的 serialization 固定到仍然是 DefaultImpls 形态的 1.7.3，
++// 生成的序列化代码就只会调用 GeneratedSerializer$DefaultImpls（新旧运行时都有）。
++configurations.configureEach {
++    resolutionStrategy {
++        force(
++            "org.jetbrains.kotlinx:kotlinx-serialization-core:1.7.3",
++            "org.jetbrains.kotlinx:kotlinx-serialization-core-jvm:1.7.3",
++            "org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.3",
++            "org.jetbrains.kotlinx:kotlinx-serialization-json-jvm:1.7.3",
++            "org.jetbrains.kotlinx:kotlinx-serialization-json-okio:1.7.3",
++            "org.jetbrains.kotlinx:kotlinx-serialization-json-okio-jvm:1.7.3",
++        )
 +    }
  }
  
@@ -62,7 +81,7 @@ index f71c2f6..3f64ab5 100644
 +    pkgName = "zh.copymanga"
      versionCode.set(
 -        providers.gradleProperty("extensionReleaseVersionCode").map { it.toInt() }.orElse(8),
-+        providers.gradleProperty("extensionReleaseVersionCode").map { it.toInt() }.orElse(110),
++        providers.gradleProperty("extensionReleaseVersionCode").map { it.toInt() }.orElse(111),
      )
      contentWarning = ContentWarning.MIXED
      libVersion = "1.6"
